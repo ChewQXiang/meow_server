@@ -43,18 +43,21 @@ SMTP（Gmail SMTP SSL）用於 Email 通知/提醒
 ## Knowledge from Lecture
 Linux系統基本指令
 
+mail server
+
 Docker
 
+Nginx
 
 ## Installation
-
+Flask
 
 ## Usage
 
 
 ## Job Assignment
-- 111213076 郭哲瑋：
-- 111213078 陳逸憲：	
+- 111213076 郭哲瑋：簡報製作、主題構想、撰寫Readme、資料整理
+- 111213078 陳逸憲：
 - 111213019 李玨叡：	
 - 111213052 鄒啟翔：
 ## References
