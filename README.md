@@ -53,13 +53,24 @@ Nginx
 Flask
 
 ## Usage
+1. 打開首頁後，按 **開始挑戰（重置練習機）**  
+2. 左側會顯示簡短描述，右側會顯示題目說明與提示對話框
+3. 若卡住，可按 **給我下一步提示** 逐步拿提示（提示步驟由 `/api/hint` 依 step 取回） 
+4. 前端每秒輪詢 `/api/status` 顯示：進行中 / 已完成 / 超時
 
+### 進入練習環境（容器）
+
+每次出題後，用這個指令進入容器修復：
+
+```bash
+sudo docker exec -it trainee bash
+```
 
 ## Job Assignment
 - 111213076 郭哲瑋：簡報製作、主題構想、撰寫Readme、資料整理
-- 111213078 陳逸憲：
-- 111213019 李玨叡：	
-- 111213052 鄒啟翔：
+- 111213078 陳逸憲：主題構想、資料整理
+- 111213019 李玨叡：主題構想、建立初始架構
+- 111213052 鄒啟翔：github編寫、腳本設計、
 ## References
 https://github.com/NCNU-OpenSource/student-labs 
 https://github.com/labex-labs/linux-practice-challenges
