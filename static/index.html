@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>喵 Server - Linux 故障排除訓練</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f7f7fb;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px 28px 32px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    }
+    h1 {
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 16px;
+    }
+    #btn-start {
+      display: block;
+      margin: 0 auto 16px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 1px solid #ccc;
+      background: #fff;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #btn-start:hover {
+      background: #eee;
+    }
+    #status-text, #timer-text {
+      text-align: center;
+      margin: 4px 0;
+      color: #444;
+    }
+    .flex-row {
+      display: flex;
+      gap: 16px;
+      margin-top: 24px;
+      align-items: stretch;
+    }
+    .left-panel, .right-panel {
+      flex: 1;
+      min-width: 0;
+    }
+    .left-panel {
+      border-right: 1px solid #eee;
+      padding-right: 12px;
+    }
+    .right-panel {
+      padding-left: 12px;
+    }
+    #cat-face {
+      font-size: 80px;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    #short-desc {
+      text-align: center;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+    #login-hint {
+      text-align: center;
+      font-size: 13px;
+      color: #666;
+      margin-top: 4px;
+    }
+    h3 {
+      margin: 8px 0;
+    }
+    #explain-box {
+      background: #f9fafc;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 48px;
+    }
+    #hint-dialog {
+      background: #fffdf5;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 60px;
+      border: 1px solid #f2e3b8;
+    }
+    #btn-next-hint {
+      margin-top: 8px;
+      padding: 6px 12px;
+      font-size: 13px;
+      border-radius: 8px;
+      border: 1px solid #e0c36f;
+      background: #ffe9a7;
+      cursor: pointer;
+    }
+    #btn-next-hint:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .status-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      margin-left: 6px;
+    }
+    .status-pending {
+      background: #e0f2ff;
+      color: #135f9b;
+    }
+    .status-success {
+      background: #e1f6d9;
+      color: #256b1f;
+    }
+    .status-timeout {
+      background: #ffe2de;
+      color: #a6301f;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>喵 Server — 互動式 Linux 故障排除訓練</h1>
+    <div class="subtitle">先破壞，再建設。讓貓咪當你的 Linux Debug 教練 🐱</div>
+
+    <button id="btn-start">開始挑戰（重置練習機）</button>
+
+    <div id="status-text">目前沒有進行中的任務。</div>
+    <div id="timer-text"></div>
+
+    <div id="login-hint"></div>
+
+    <div class="flex-row">
+      <!-- 左邊：貓咪 + 簡短資訊 -->
+      <div class="left-panel">
+        <div id="cat-face">😺</div>
+        <div id="short-desc">按「開始挑戰」讓貓咪開始搗蛋吧～</div>
+      </div>
+
+      <!-- 右邊：題目講解 + 對話提示 -->
+      <div class="right-panel">
+        <h3>題目說明</h3>
+        <p id="explain-box">（按「開始挑戰」後，這裡會解釋這一題在練什麼）</p>
+
+        <h3>提示對話</h3>
+        <div id="hint-dialog">
+          還沒有提示，先試著自己觀察系統狀況。卡住再叫我～
+        </div>
+        <button id="btn-next-hint" disabled>給我下一步提示</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/main.js"></script>
+</body>
+</html>
+
