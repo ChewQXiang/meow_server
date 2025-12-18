@@ -68,7 +68,7 @@
 
     啟動 Trainee 容器
 
-    系統在出題時會自動執行以下邏輯：
+系統在出題時會自動執行以下邏輯：
 
     ```bash
     docker rm -f trainee 2>/dev/null
@@ -120,3 +120,13 @@
     ## References
     https://github.com/NCNU-OpenSource/student-labs 
     https://github.com/labex-labs/linux-practice-challenges
+=======
+## Job Assignment
+- 111213076 郭哲瑋：簡報製作、主題構想、資料整理
+- 111213078 陳逸憲：主題構想、資料整理
+- 111213019 李玨叡：主題構想、建立專案初始架構
+- 111213052 鄒啟翔：github編寫、腳本設計、撰寫Readme
+## References
+https://github.com/NCNU-OpenSource/student-labs 
+https://github.com/labex-labs/linux-practice-challenges
+
