@@ -12,15 +12,22 @@
 
 ## Implementation Resources
 OS：Ubuntu / Linux
+
 Runtime：Docker（必須）
+
 後端：Python + Flask（提供 API 與 Web UI）
+
 前端：純 HTML/CSS/JS（輪詢 API、顯示題目與提示）
+
 題目環境：Docker image meow-lab-image（容器名 trainee）
 
 ## Existing Library/Software
 Python 3
+
 Flask（API：/api/start, /api/status, /api/hint）
+
 Docker CLI（由後端呼叫 docker run/exec/rm）
+
 SMTP（Gmail SMTP SSL）用於 Email 通知/提醒
 
 ## Implementation Process
