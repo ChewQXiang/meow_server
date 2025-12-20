@@ -16,6 +16,10 @@ try {
   console.warn('       若需啟用，請升級至 Node.js 20+ 或在環境中提供 DOMMatrix / ImageData / Path2D polyfill。');
 }
 
+function isPDFParsingAvailable() {
+  return Boolean(pdfParse);
+}
+
 // 初始化 OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'your-api-key-here'
@@ -62,7 +66,9 @@ function chunkText(text, chunkSize = 500) {
  */
 async function parsePDF(buffer) {
   if (!pdfParse) {
-    throw new Error(`PDF parsing is disabled in this environment：${pdfParseError?.message || '缺少 DOM API polyfill'}`);
+    const error = new Error(`PDF 解析功能目前停用：${pdfParseError?.message || '缺少 DOM API polyfill 或 Node.js 版本過低'}。請改用 Markdown / TXT 上傳，或升級到 Node.js 20 並提供 DOMMatrix polyfill。`);
+    error.statusCode = 503;
+    throw error;
   }
 
   try {
@@ -100,16 +106,65 @@ function parseMarkdown(markdown = '') {
  * @returns {Promise<string>} - Markdown 內容
  */
 async function fetchHackMD(url) {
-  try {
-    // HackMD URL 格式: https://hackmd.io/@user/note
-    // 轉換為 raw 格式: https://hackmd.io/@user/note/download
-    const rawUrl = url.endsWith('/download') ? url : `${url}/download`;
+  const axios = require('axios');
+  const headers = { 'User-Agent': 'meow-server-rag' };
 
-    const axios = require('axios');
-    const response = await axios.get(rawUrl);
+  // HackMD URL 格式: https://hackmd.io/@user/note
+  // 轉換為 raw 格式: https://hackmd.io/@user/note/download
+  const rawUrl = url.endsWith('/download') ? url : `${url}/download`;
+
+  const tryHackMDAPI = async () => {
+    const token = process.env.HACKMD_TOKEN;
+    if (!token) return null;
+
+    const noteId = (() => {
+      try {
+        const { pathname } = new URL(url);
+        const segments = pathname.split('/').filter(Boolean);
+        return segments[segments.length - 1];
+      } catch (e) {
+        return null;
+      }
+    })();
+
+    if (!noteId) return null;
+
+    const apiUrl = `https://api.hackmd.io/v1/notes/${noteId}`;
+    const response = await axios.get(apiUrl, {
+      headers: { ...headers, Authorization: `Bearer ${token}` }
+    });
+
+    if (response.data?.content) {
+      return response.data.content;
+    }
+
+    throw new Error('HackMD API 回傳空內容，請確認 noteId 是否正確');
+  };
+
+  try {
+    const response = await axios.get(rawUrl, { headers });
     return response.data;
   } catch (error) {
-    throw new Error(`Failed to fetch HackMD: ${error.message}`);
+    const status = error.response?.status;
+
+    if (status === 403) {
+      try {
+        const apiContent = await tryHackMDAPI();
+        if (apiContent) return apiContent;
+      } catch (apiError) {
+        const friendlyError = new Error(`Failed to fetch HackMD via API: ${apiError.message}`);
+        friendlyError.statusCode = apiError.response?.status || 403;
+        throw friendlyError;
+      }
+
+      const friendlyError = new Error('Failed to fetch HackMD: 403 Forbidden，請確認文件已設為公開，或在環境變數 HACKMD_TOKEN 中提供存取權杖以讀取私人文件');
+      friendlyError.statusCode = 403;
+      throw friendlyError;
+    }
+
+    const fallbackError = new Error(`Failed to fetch HackMD: ${error.message}`);
+    fallbackError.statusCode = status;
+    throw fallbackError;
   }
 }
 
@@ -354,6 +409,216 @@ async function batchGenerateQuestions(topics, availableFaults, count = 10) {
   return questions;
 }
 
+/**
+ * 使用 AI 生成 fault 腳本（破壞系統的腳本）
+ * @param {string} topic - 題目主題
+ * @param {object} questionData - 題目資訊
+ * @returns {Promise<string>} - 生成的 bash 腳本
+ */
+async function generateFaultScript(topic, questionData) {
+  // 檢索相關教材
+  const relevantDocs = await retrieve(topic, 3);
+  const context = relevantDocs.map(doc => doc.content).join('\n\n');
+
+  const prompt = `你是一個 Linux 系統管理專家。請根據以下題目生成一個 fault 腳本（故障注入腳本）。
+
+題目資訊：
+- 標題：${questionData.title}
+- 描述：${questionData.body}
+- 難度：${questionData.difficulty}
+- 主題：${topic}
+
+相關教材：
+${context || '（無相關教材）'}
+
+請生成一個 bash 腳本來創建這個故障。腳本要求：
+
+1. **安全性**：
+   - 不要刪除關鍵系統檔案（/etc/passwd, /etc/shadow, /boot 等）
+   - 不要破壞整個系統
+   - 只修改與題目相關的配置
+
+2. **可逆性**：
+   - 故障必須可以由學生修復
+   - 避免造成永久性損害
+
+3. **典型故障類型**：
+   - 服務配置錯誤（配置檔案語法錯誤、參數錯誤）
+   - 服務未啟動或停止
+   - 權限問題（檔案或目錄權限不正確）
+   - 網路配置錯誤
+   - 環境變數問題
+   - 套件相關問題
+
+4. **腳本格式**：
+   - 必須以 #!/bin/bash 開頭
+   - 加上適當的錯誤處理
+   - 加上註解說明每個步驟
+   - 在開頭輸出 "Injecting fault: [故障描述]"
+
+請直接生成 bash 腳本，不要用 markdown 格式包裹。`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: "你是一個 Linux 系統管理專家，擅長創建教學用的故障場景。請只輸出 bash 腳本，不要包含其他解釋。" },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+    });
+
+    let script = response.choices[0].message.content.trim();
+
+    // 清理 markdown 格式（如果有）
+    script = script.replace(/^```bash\n?/gm, '').replace(/^```\n?/gm, '');
+
+    // 確保有 shebang
+    if (!script.startsWith('#!/bin/bash')) {
+      script = '#!/bin/bash\n\n' + script;
+    }
+
+    return script;
+  } catch (error) {
+    console.error('Fault script generation failed:', error.message);
+    // 返回預設的簡單故障腳本
+    return `#!/bin/bash
+# 預設故障腳本 - ${topic}
+
+echo "Injecting fault: ${questionData.title}"
+
+# 停止相關服務（示例）
+systemctl stop nginx 2>/dev/null || true
+
+echo "Fault injection completed"
+`;
+  }
+}
+
+/**
+ * 使用 AI 生成 check 腳本（驗證修復的腳本）
+ * @param {string} topic - 題目主題
+ * @param {object} questionData - 題目資訊
+ * @param {string} faultScript - 對應的 fault 腳本
+ * @returns {Promise<string>} - 生成的驗證腳本
+ */
+async function generateCheckScript(topic, questionData, faultScript) {
+  const prompt = `你是一個 Linux 系統管理專家。請根據以下題目和 fault 腳本，生成一個 check 腳本（驗證修復的腳本）。
+
+題目資訊：
+- 標題：${questionData.title}
+- 描述：${questionData.body}
+- 難度：${questionData.difficulty}
+
+對應的 fault 腳本：
+\`\`\`bash
+${faultScript}
+\`\`\`
+
+請生成一個 bash 腳本來檢查學生是否成功修復了問題。腳本要求：
+
+1. **檢查項目**：
+   - 驗證服務是否正常運行
+   - 檢查配置檔案是否正確
+   - 驗證權限設定
+   - 測試功能是否正常
+
+2. **輸出格式**：
+   - 如果修復成功：輸出 "PASS" 並以 exit 0 結束
+   - 如果修復失敗：輸出具體的錯誤訊息並以 exit 1 結束
+   - 可以提供多個檢查點，每個都有清楚的訊息
+
+3. **腳本格式**：
+   - 必須以 #!/bin/bash 開頭
+   - 使用 set -e 確保錯誤時停止（但在需要繼續的地方用 || true）
+   - 加上註解說明每個檢查步驟
+
+4. **提供提示**：
+   - 如果檢查失敗，給出有幫助的提示
+   - 不要直接給出答案，但要指出問題方向
+
+請直接生成 bash 腳本，不要用 markdown 格式包裹。`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: "你是一個 Linux 系統管理專家，擅長創建驗證腳本。請只輸出 bash 腳本，不要包含其他解釋。" },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.7,
+    });
+
+    let script = response.choices[0].message.content.trim();
+
+    // 清理 markdown 格式（如果有）
+    script = script.replace(/^```bash\n?/gm, '').replace(/^```\n?/gm, '');
+
+    // 確保有 shebang
+    if (!script.startsWith('#!/bin/bash')) {
+      script = '#!/bin/bash\n\n' + script;
+    }
+
+    return script;
+  } catch (error) {
+    console.error('Check script generation failed:', error.message);
+    // 返回預設的檢查腳本
+    return `#!/bin/bash
+# 預設檢查腳本 - ${topic}
+
+# 檢查服務狀態（示例）
+if systemctl is-active --quiet nginx; then
+    echo "PASS: Service is running"
+    exit 0
+else
+    echo "FAIL: Service is not running"
+    echo "Hint: Check service status with 'systemctl status nginx'"
+    exit 1
+fi
+`;
+  }
+}
+
+/**
+ * 使用 AI 完整生成題目（包含題目內容和腳本）
+ * @param {string} topic - 題目主題
+ * @returns {Promise<object>} - 包含題目和腳本的完整資料
+ */
+async function generateQuestionWithScripts(topic) {
+  // 1. 生成題目內容（不需要 availableFaults，因為我們要生成新腳本）
+  const questionData = await generateQuestion(topic, []);
+
+  // 2. 生成 fault 腳本
+  const faultScript = await generateFaultScript(topic, questionData);
+
+  // 3. 生成 check 腳本
+  const checkScript = await generateCheckScript(topic, questionData, faultScript);
+
+  // 4. 生成唯一的 ID
+  const timestamp = Date.now();
+  const faultId = `ai_fault_${timestamp}`;
+  const checkId = `ai_check_${timestamp}`;
+
+  return {
+    // 題目資訊
+    title: questionData.title,
+    body: questionData.body,
+    difficulty: questionData.difficulty,
+    type: 'ai-generated',
+    learning_objectives: questionData.learning_objectives,
+
+    // 腳本
+    fault_id: faultId,
+    fault_script: faultScript,
+    check_id: checkId,
+    check_script: checkScript,
+
+    // 元資料
+    generated_at: new Date().toISOString(),
+    topic: topic
+  };
+}
+
 module.exports = {
   parsePDF,
   parseMarkdown,
@@ -363,5 +628,9 @@ module.exports = {
   generateQuestion,
   generateHint,
   batchGenerateQuestions,
-  vectorStore // 用於測試
+  generateFaultScript,
+  generateCheckScript,
+  generateQuestionWithScripts,
+  vectorStore, // 用於測試
+  isPDFParsingAvailable
 };

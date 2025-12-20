@@ -270,6 +270,37 @@
       background: #fecaca;
       color: #991b1b;
     }
+
+    /* Tab Buttons */
+    .tab-btn {
+      padding: 0.75rem 1.5rem;
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: #64748b;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .tab-btn:hover {
+      color: #3d5a80;
+    }
+
+    .tab-btn.active {
+      color: #3d5a80;
+      border-bottom-color: #3d5a80;
+      font-weight: 600;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -289,7 +320,15 @@
       <section class="card">
         <h2>新增教材</h2>
 
-        <form id="matForm">
+        <!-- Tab 切換 -->
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid #e5e7eb;">
+          <button type="button" class="tab-btn active" data-tab="text">文字輸入</button>
+          <button type="button" class="tab-btn" data-tab="pdf">上傳 PDF</button>
+          <button type="button" class="tab-btn" data-tab="hackmd">HackMD 連結</button>
+        </div>
+
+        <!-- 文字輸入表單 -->
+        <form id="matForm" class="tab-content active" data-tab="text">
           <div class="form-group">
             <label>標題</label>
             <input id="matTitle" placeholder="教材標題" required />
@@ -300,6 +339,44 @@
           </div>
           <button type="submit" class="submit-btn">送出</button>
           <p id="matMsg" class="error-msg"></p>
+        </form>
+
+        <!-- PDF 上傳表單 -->
+        <form id="pdfForm" class="tab-content" data-tab="pdf">
+          <div class="form-group">
+            <label>標題</label>
+            <input id="pdfTitle" placeholder="教材標題" />
+          </div>
+          <div class="form-group">
+            <label>描述（選填）</label>
+            <input id="pdfDesc" placeholder="教材描述" />
+          </div>
+          <div class="form-group">
+            <label>選擇 PDF 檔案</label>
+            <input type="file" id="pdfFile" accept=".pdf,.md,.txt" required style="padding: 0.5rem; background: white;" />
+          </div>
+          <p id="pdfStatus" class="error-msg" style="color: #f59e0b;"></p>
+          <button type="submit" class="submit-btn">上傳</button>
+          <p id="pdfMsg" class="error-msg"></p>
+        </form>
+
+        <!-- HackMD 匯入表單 -->
+        <form id="hackmdForm" class="tab-content" data-tab="hackmd">
+          <div class="form-group">
+            <label>HackMD URL</label>
+            <input id="hackmdUrl" type="url" placeholder="https://hackmd.io/@username/document" required />
+          </div>
+          <div class="form-group">
+            <label>標題</label>
+            <input id="hackmdTitle" placeholder="教材標題" />
+          </div>
+          <div class="form-group">
+            <label>描述（選填）</label>
+            <input id="hackmdDesc" placeholder="教材描述" />
+          </div>
+          <p id="hackmdStatus" class="error-msg" style="color: #f59e0b;"></p>
+          <button type="submit" class="submit-btn">匯入</button>
+          <p id="hackmdMsg" class="error-msg"></p>
         </form>
       </section>
 
@@ -410,11 +487,57 @@ async function loadQuestions(){
   }
 }
 
+async function loadRagConfig() {
+  try {
+    const r = await api("/api/teacher/rag/config");
+
+    if (!r.pdfParsingAvailable) {
+      document.getElementById("pdfStatus").textContent = "⚠️ 目前環境無法解析 PDF，請改用 Markdown / TXT；若需 PDF 解析請升級 Node 版本並提供 DOMMatrix polyfill。";
+      document.getElementById("pdfFile").setAttribute("disabled", "disabled");
+      document.querySelector('#pdfForm button[type=\"submit\"]').setAttribute("disabled", "disabled");
+    } else {
+      document.getElementById("pdfStatus").textContent = "";
+      document.getElementById("pdfFile").removeAttribute("disabled");
+      document.querySelector('#pdfForm button[type=\"submit\"]').removeAttribute("disabled");
+    }
+
+    if (!r.hackmdTokenConfigured) {
+      document.getElementById("hackmdStatus").textContent = "⚠️ 未設定 HACKMD_TOKEN，若文件未公開可能會收到 403。請將文件設為公開或提供 token。";
+    } else {
+      document.getElementById("hackmdStatus").textContent = "";
+    }
+  } catch (error) {
+    // 若設定拉取失敗，不阻塞頁面
+    console.warn("Failed to load RAG config", error);
+  }
+}
+
 document.getElementById("logoutBtn").addEventListener("click", async ()=>{
   await api("/api/auth/logout", { method:"POST" });
   location.href = "/";
 });
 
+// Tab 切換功能
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tabName = btn.dataset.tab;
+
+    // 更新 tab 按鈕狀態
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    // 更新內容顯示
+    document.querySelectorAll(".tab-content").forEach(content => {
+      if (content.dataset.tab === tabName) {
+        content.classList.add("active");
+      } else {
+        content.classList.remove("active");
+      }
+    });
+  });
+});
+
+// 文字輸入表單
 document.getElementById("matForm").addEventListener("submit", async (e)=>{
   e.preventDefault();
   const msg = document.getElementById("matMsg");
@@ -429,9 +552,84 @@ document.getElementById("matForm").addEventListener("submit", async (e)=>{
     });
     document.getElementById("matTitle").value = "";
     document.getElementById("matContent").value = "";
+    msg.textContent = "✅ 教材新增成功！";
+    msg.style.color = "#10b981";
     await loadMaterials();
   }catch(err){
     msg.textContent = err?.error || "新增失敗（請確定是教師身份登入）";
+    msg.style.color = "#ef4444";
+  }
+});
+
+// PDF 上傳表單
+document.getElementById("pdfForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const msg = document.getElementById("pdfMsg");
+  msg.textContent = "";
+
+  try{
+    const formData = new FormData();
+    const fileInput = document.getElementById("pdfFile");
+    const title = document.getElementById("pdfTitle").value.trim();
+    const description = document.getElementById("pdfDesc").value.trim();
+
+    if (!fileInput.files[0]) {
+      msg.textContent = "請選擇檔案";
+      msg.style.color = "#ef4444";
+      return;
+    }
+
+    formData.append("file", fileInput.files[0]);
+    if (title) formData.append("title", title);
+    if (description) formData.append("description", description);
+
+    const res = await fetch("/api/teacher/materials/upload", {
+      method: "POST",
+      credentials: "include",
+      body: formData
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw data;
+
+    document.getElementById("pdfTitle").value = "";
+    document.getElementById("pdfDesc").value = "";
+    document.getElementById("pdfFile").value = "";
+    msg.textContent = `✅ ${data.message} (新增 ${data.chunksAdded} 個文字區塊)`;
+    msg.style.color = "#10b981";
+    await loadMaterials();
+  }catch(err){
+    msg.textContent = err?.error || "上傳失敗";
+    msg.style.color = "#ef4444";
+  }
+});
+
+// HackMD 匯入表單
+document.getElementById("hackmdForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const msg = document.getElementById("hackmdMsg");
+  msg.textContent = "";
+
+  try{
+    const url = document.getElementById("hackmdUrl").value.trim();
+    const title = document.getElementById("hackmdTitle").value.trim();
+    const description = document.getElementById("hackmdDesc").value.trim();
+
+    const data = await api("/api/teacher/materials/hackmd", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, title, description })
+    });
+
+    document.getElementById("hackmdUrl").value = "";
+    document.getElementById("hackmdTitle").value = "";
+    document.getElementById("hackmdDesc").value = "";
+    msg.textContent = `✅ ${data.message} (新增 ${data.chunksAdded} 個文字區塊)`;
+    msg.style.color = "#10b981";
+    await loadMaterials();
+  }catch(err){
+    msg.textContent = err?.error || "匯入失敗";
+    msg.style.color = "#ef4444";
   }
 });
 
@@ -439,6 +637,7 @@ document.getElementById("matForm").addEventListener("submit", async (e)=>{
   await mustTeacher();
   await loadMaterials();
   await loadQuestions();
+  await loadRagConfig();
 })();
 </script>
 </body>

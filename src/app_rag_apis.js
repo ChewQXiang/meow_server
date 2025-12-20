@@ -105,7 +105,8 @@ function registerRAGApis(app, requireAuth, requireRole) {
         });
       } catch (error) {
         console.error('Material upload error:', error);
-        res.status(500).json({ ok: false, error: error.message });
+        const status = error.statusCode || 500;
+        res.status(status).json({ ok: false, error: error.message });
       }
     }
   );
@@ -153,7 +154,8 @@ function registerRAGApis(app, requireAuth, requireRole) {
         });
       } catch (error) {
         console.error('HackMD import error:', error);
-        res.status(500).json({ ok: false, error: error.message });
+        const status = error.statusCode || 500;
+        res.status(status).json({ ok: false, error: error.message });
       }
     }
   );
@@ -186,66 +188,77 @@ function registerRAGApis(app, requireAuth, requireRole) {
 
   /**
    * POST /api/teacher/questions/generate
-   * 使用 AI 生成題目
+   * 使用 AI 生成題目（包含腳本）
    */
   app.post('/api/teacher/questions/generate',
     requireAuth,
     requireRole('teacher'),
     async (req, res) => {
       try {
-        const { topic, count = 1 } = req.body;
+        const { topic, count = 1, useAIScripts = true } = req.body;
 
         if (!topic) {
           return res.status(400).json({ ok: false, error: '需要題目主題' });
         }
 
-        // 獲取可用的 fault 腳本
-        const [faults] = await pool.query(
-          `SELECT DISTINCT fault_id, type, difficulty FROM questions ORDER BY id`
-        );
-
-        const availableFaults = faults.map(f => ({
-          fault_id: f.fault_id,
-          type: f.type,
-          description: `${f.difficulty} level ${f.type} fault`
-        }));
-
-        // 生成題目
         const generatedQuestions = [];
-        for (let i = 0; i < count; i++) {
-          const question = await rag.generateQuestion(topic, availableFaults);
 
-          // 找到對應的 fault 和 check 路徑
-          const [existingQ] = await pool.query(
-            `SELECT fault_path, check_path, check_id FROM questions WHERE fault_id = ? LIMIT 1`,
-            [question.fault_id]
+        if (useAIScripts) {
+          // 使用 AI 生成完整題目（包含腳本）
+          for (let i = 0; i < count; i++) {
+            const question = await rag.generateQuestionWithScripts(topic);
+            generatedQuestions.push(question);
+
+            // 避免 rate limit
+            if (i < count - 1) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          }
+        } else {
+          // 舊方式：只生成題目，使用已有的腳本
+          const [faults] = await pool.query(
+            `SELECT DISTINCT fault_id, type, difficulty FROM questions ORDER BY id`
           );
 
-          if (existingQ.length > 0) {
-            question.fault_path = existingQ[0].fault_path;
-            question.check_path = existingQ[0].check_path;
-            question.check_id = existingQ[0].check_id;
-          } else {
-            question.fault_path = `/opt/faults/${question.fault_id}.sh`;
-            question.check_path = `/opt/checks/check_${question.fault_id.replace('fault_', '')}.sh`;
-            question.check_id = `check_${question.fault_id.replace('fault_', '')}`;
-          }
+          const availableFaults = faults.map(f => ({
+            fault_id: f.fault_id,
+            type: f.type,
+            description: `${f.difficulty} level ${f.type} fault`
+          }));
 
-          // 確定 type
-          question.type = question.type || 'ai-generated';
+          for (let i = 0; i < count; i++) {
+            const question = await rag.generateQuestion(topic, availableFaults);
 
-          generatedQuestions.push(question);
+            // 找到對應的 fault 和 check 路徑
+            const [existingQ] = await pool.query(
+              `SELECT fault_path, check_path, check_id FROM questions WHERE fault_id = ? LIMIT 1`,
+              [question.fault_id]
+            );
 
-          // 避免 rate limit
-          if (i < count - 1) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (existingQ.length > 0) {
+              question.fault_path = existingQ[0].fault_path;
+              question.check_path = existingQ[0].check_path;
+              question.check_id = existingQ[0].check_id;
+            } else {
+              question.fault_path = `/opt/faults/${question.fault_id}.sh`;
+              question.check_path = `/opt/checks/check_${question.fault_id.replace('fault_', '')}.sh`;
+              question.check_id = `check_${question.fault_id.replace('fault_', '')}`;
+            }
+
+            question.type = question.type || 'ai-generated';
+            generatedQuestions.push(question);
+
+            // 避免 rate limit
+            if (i < count - 1) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
           }
         }
 
         res.json({
           ok: true,
           questions: generatedQuestions,
-          message: `成功生成 ${generatedQuestions.length} 個題目`
+          message: `成功生成 ${generatedQuestions.length} 個題目${useAIScripts ? '（含 AI 腳本）' : ''}`
         });
       } catch (error) {
         console.error('Question generation error:', error);
@@ -256,7 +269,7 @@ function registerRAGApis(app, requireAuth, requireRole) {
 
   /**
    * POST /api/teacher/questions/save-generated
-   * 儲存 AI 生成的題目到資料庫
+   * 儲存 AI 生成的題目到資料庫（包含腳本內容）
    */
   app.post('/api/teacher/questions/save-generated',
     requireAuth,
@@ -271,22 +284,48 @@ function registerRAGApis(app, requireAuth, requireRole) {
 
         const savedIds = [];
         for (const q of questions) {
-          const [result] = await pool.query(
-            `INSERT INTO questions (title, body, difficulty, type, fault_id, fault_path, check_id, check_path, enabled)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              q.title,
-              q.body,
-              q.difficulty || 'medium',
-              q.type || 'ai-generated',
-              q.fault_id,
-              q.fault_path,
-              q.check_id,
-              q.check_path,
-              1
-            ]
-          );
-          savedIds.push(result.insertId);
+          // 檢查是否有 AI 生成的腳本
+          const hasScripts = q.fault_script && q.check_script;
+
+          if (hasScripts) {
+            // 有 AI 腳本：保存腳本內容到數據庫
+            const [result] = await pool.query(
+              `INSERT INTO questions (title, body, difficulty, type, fault_id, fault_path, fault_script, check_id, check_path, check_script, enabled)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                q.title,
+                q.body,
+                q.difficulty || 'medium',
+                q.type || 'ai-generated',
+                q.fault_id,
+                q.fault_path || null, // AI 生成的題目可能沒有實體檔案路徑
+                q.fault_script,
+                q.check_id,
+                q.check_path || null,
+                q.check_script,
+                1
+              ]
+            );
+            savedIds.push(result.insertId);
+          } else {
+            // 沒有 AI 腳本：使用舊方式保存（只保存路徑）
+            const [result] = await pool.query(
+              `INSERT INTO questions (title, body, difficulty, type, fault_id, fault_path, check_id, check_path, enabled)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                q.title,
+                q.body,
+                q.difficulty || 'medium',
+                q.type || 'ai-generated',
+                q.fault_id,
+                q.fault_path,
+                q.check_id,
+                q.check_path,
+                1
+              ]
+            );
+            savedIds.push(result.insertId);
+          }
         }
 
         res.json({
@@ -380,6 +419,26 @@ function registerRAGApis(app, requireAuth, requireRole) {
             aiGeneratedQuestions: questionCount[0].count,
             vectorStoreSize: rag.vectorStore.embeddings.length
           }
+        });
+      } catch (error) {
+        res.status(500).json({ ok: false, error: error.message });
+      }
+    }
+  );
+
+  /**
+   * GET /api/teacher/rag/config
+   * 回傳 RAG 相關環境能力（供前端顯示提示）
+   */
+  app.get('/api/teacher/rag/config',
+    requireAuth,
+    requireRole('teacher'),
+    async (req, res) => {
+      try {
+        res.json({
+          ok: true,
+          pdfParsingAvailable: rag.isPDFParsingAvailable(),
+          hackmdTokenConfigured: Boolean(process.env.HACKMD_TOKEN)
         });
       } catch (error) {
         res.status(500).json({ ok: false, error: error.message });
