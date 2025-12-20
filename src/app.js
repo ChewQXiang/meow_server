@@ -69,6 +69,43 @@ async function getStudentVmConn(studentId) {
   return { host, port, username, privateKeyPath };
 }
 
+// === 執行腳本（支持 AI 生成的腳本或文件系統中的腳本）===
+async function executeScript(conn, scriptContent, scriptPath, scriptType = 'fault') {
+  if (!conn) {
+    throw new Error('VM 連線資訊不存在');
+  }
+
+  try {
+    if (scriptContent) {
+      // AI 生成的腳本：寫入臨時文件並執行
+      const tempPath = `/tmp/${scriptType}_${Date.now()}.sh`;
+
+      // 1. 寫入腳本內容到 VM
+      const writeCmd = `cat > ${tempPath} << 'EOFSCRIPT'\n${scriptContent}\nEOFSCRIPT`;
+      await runSSH({ ...conn, command: writeCmd });
+
+      // 2. 添加執行權限
+      await runSSH({ ...conn, command: `chmod +x ${tempPath}` });
+
+      // 3. 執行腳本
+      const result = await runSSH({ ...conn, command: `sudo ${tempPath}` });
+
+      // 4. 清理臨時文件
+      await runSSH({ ...conn, command: `rm -f ${tempPath}` }).catch(() => {});
+
+      return result;
+    } else if (scriptPath) {
+      // 使用文件系統中的腳本
+      const cmd = `sudo ${scriptPath}`;
+      return await runSSH({ ...conn, command: cmd });
+    } else {
+      throw new Error('沒有可執行的腳本內容或路徑');
+    }
+  } catch (error) {
+    throw new Error(`腳本執行失敗: ${error.message}`);
+  }
+}
+
 // === health check ===
 app.get('/api/health', async (req, res) => {
   const pveStatus = await checkPVEConnection();
@@ -261,11 +298,11 @@ app.post('/api/student/start', requireAuth, requireRole('student'), async (req, 
     // 注入第一題 fault
     const conn = await getStudentVmConn(studentId);
     let injectOutput = '';
-    
+
     if (conn) {
       try {
-        const cmd = `sudo ${first.fault_path}`;
-        const r = await runSSH({ ...conn, command: cmd });
+        // 使用新的 executeScript 函數（支持 AI 腳本和文件腳本）
+        const r = await executeScript(conn, first.fault_script, first.fault_path, 'fault');
         injectOutput = (r.stdout || r.stderr || '').trim();
       } catch (e) {
         injectOutput = `注入失敗: ${e.message}`;
@@ -312,8 +349,8 @@ app.post('/api/student/verify', requireAuth, requireRole('student'), async (req,
     }
 
     try {
-      const cmd = `sudo ${q.check_path}`;
-      const r = await runSSH({ ...conn, command: cmd });
+      // 使用新的 executeScript 函數（支持 AI 腳本和文件腳本）
+      const r = await executeScript(conn, q.check_script, q.check_path, 'check');
       const passed = (r.code === 0);
       const output = (r.stdout || r.stderr || '').trim();
 
@@ -380,8 +417,8 @@ app.post('/api/student/next', requireAuth, requireRole('student'), async (req, r
 
     if (conn) {
       try {
-        const cmd = `sudo ${next.fault_path}`;
-        const r = await runSSH({ ...conn, command: cmd });
+        // 使用新的 executeScript 函數（支持 AI 腳本和文件腳本）
+        const r = await executeScript(conn, next.fault_script, next.fault_path, 'fault');
         injectOutput = (r.stdout || r.stderr || '').trim();
       } catch (e) {
         injectOutput = `注入失敗: ${e.message}`;
