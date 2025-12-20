@@ -105,7 +105,8 @@ function registerRAGApis(app, requireAuth, requireRole) {
         });
       } catch (error) {
         console.error('Material upload error:', error);
-        res.status(500).json({ ok: false, error: error.message });
+        const status = error.statusCode || 500;
+        res.status(status).json({ ok: false, error: error.message });
       }
     }
   );
@@ -153,7 +154,8 @@ function registerRAGApis(app, requireAuth, requireRole) {
         });
       } catch (error) {
         console.error('HackMD import error:', error);
-        res.status(500).json({ ok: false, error: error.message });
+        const status = error.statusCode || 500;
+        res.status(status).json({ ok: false, error: error.message });
       }
     }
   );
@@ -417,6 +419,26 @@ function registerRAGApis(app, requireAuth, requireRole) {
             aiGeneratedQuestions: questionCount[0].count,
             vectorStoreSize: rag.vectorStore.embeddings.length
           }
+        });
+      } catch (error) {
+        res.status(500).json({ ok: false, error: error.message });
+      }
+    }
+  );
+
+  /**
+   * GET /api/teacher/rag/config
+   * 回傳 RAG 相關環境能力（供前端顯示提示）
+   */
+  app.get('/api/teacher/rag/config',
+    requireAuth,
+    requireRole('teacher'),
+    async (req, res) => {
+      try {
+        res.json({
+          ok: true,
+          pdfParsingAvailable: rag.isPDFParsingAvailable(),
+          hackmdTokenConfigured: Boolean(process.env.HACKMD_TOKEN)
         });
       } catch (error) {
         res.status(500).json({ ok: false, error: error.message });
