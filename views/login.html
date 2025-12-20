@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>登入｜Platform</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #2c7da0 0%, #4a90a4 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-container {
+      display: flex;
+      width: 100%;
+      max-width: 750px;
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    /* 左側 - Create Account */
+    .left-panel {
+      flex: 0 0 40%;
+      background: linear-gradient(135deg, #3d5a80 0%, #4a5f7f 100%);
+      color: white;
+      padding: 50px 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .left-panel h2 {
+      font-size: 2rem;
+      font-weight: 300;
+      margin-bottom: 35px;
+      letter-spacing: 1px;
+    }
+
+    .sign-up-btn {
+      padding: 12px 45px;
+      border: 2px solid white;
+      border-radius: 25px;
+      background: transparent;
+      color: white;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      letter-spacing: 0.5px;
+    }
+
+    .sign-up-btn:hover {
+      background: white;
+      color: #3d5a80;
+      transform: translateY(-2px);
+    }
+
+    /* 右側 - Login Form */
+    .right-panel {
+      flex: 1;
+      padding: 50px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .welcome-text {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+
+    .welcome-text h1 {
+      font-size: 2rem;
+      font-weight: 400;
+      color: #333;
+      margin-bottom: 0;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 18px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+      background: #f8f9fa;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #2c7da0;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(44, 125, 160, 0.1);
+    }
+
+    .form-group input::placeholder {
+      color: #aaa;
+    }
+
+    .forgot-password {
+      text-align: left;
+      margin-bottom: 25px;
+    }
+
+    .forgot-password a {
+      color: #999;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .forgot-password a:hover {
+      color: #2c7da0;
+    }
+
+    .sign-in-btn {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 25px;
+      background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%);
+      color: white;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+    }
+
+    .sign-in-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+    }
+
+    .sign-in-btn:active {
+      transform: translateY(0);
+    }
+
+    .error-message {
+      color: #e74c3c;
+      font-size: 0.9rem;
+      text-align: center;
+      margin-top: 15px;
+      min-height: 20px;
+    }
+
+
+    /* 響應式設計 */
+    @media (max-width: 768px) {
+      .login-container {
+        flex-direction: column;
+        max-width: 450px;
+      }
+
+      .left-panel {
+        padding: 40px 30px;
+      }
+
+      .left-panel h2 {
+        font-size: 2rem;
+      }
+
+      .right-panel {
+        padding: 40px 30px;
+      }
+
+      .welcome-text h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <!-- 左側：Create Account -->
+    <div class="left-panel">
+      <h2>Create Account</h2>
+      <button class="sign-up-btn" onclick="handleSignUp()">Sign up</button>
+    </div>
+
+    <!-- 右側：Login Form -->
+    <div class="right-panel">
+      <div class="welcome-text">
+        <h1>Welcome</h1>
+      </div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <input
+            type="text"
+            id="username"
+            placeholder="User Name"
+            required
+            autocomplete="username"
+          />
+        </div>
+
+        <div class="form-group">
+          <input
+            type="password"
+            id="password"
+            placeholder="Password"
+            required
+            autocomplete="current-password"
+          />
+        </div>
+
+        <div class="forgot-password">
+          <a href="#" onclick="handleForgotPassword(event)">Forget your password?</a>
+        </div>
+
+        <button type="submit" class="sign-in-btn">Sign in</button>
+
+        <div class="error-message" id="msg"></div>
+      </form>
+    </div>
+  </div>
+
+<script>
+// API 函數
+async function api(path, opt = {}) {
+  const res = await fetch(path, { credentials: "include", ...opt });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw data;
+  return data;
+}
+
+// 根據角色重定向
+async function redirectByRole(user) {
+  if (user.role === "teacher") location.href = "/teacher";
+  else location.href = "/student";
+}
+
+// Sign up 按鈕處理
+function handleSignUp() {
+  alert('註冊功能開發中，請使用 Demo 帳號登入');
+}
+
+// 忘記密碼處理
+function handleForgotPassword(event) {
+  event.preventDefault();
+  alert('請聯絡系統管理員重設密碼');
+}
+
+// 頁面載入時檢查是否已登入
+(async () => {
+  try {
+    const me = await api("/api/me");
+    if (me.user) await redirectByRole(me.user);
+  } catch (e) {
+    // 未登入，繼續顯示登入頁面
+  }
+})();
+
+// 登入表單提交
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("msg");
+  msg.textContent = "";
+
+  try {
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+
+    const r = await api("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+
+    // 登入成功，重定向到對應頁面
+    await redirectByRole(r.user);
+  } catch (err) {
+    msg.textContent = err?.error || "登入失敗，請檢查帳號密碼";
+  }
+});
+</script>
+</body>
+</html>

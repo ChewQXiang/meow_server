@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>學生端｜Platform</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      position: sticky;
+      top: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid #e5e7eb;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      z-index: 100;
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 0.25rem;
+    }
+
+    .header-left p {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+
+    .logout-btn {
+      padding: 0.625rem 1.5rem;
+      background: linear-gradient(135deg, #3d5a80 0%, #2c4a66 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(61, 90, 128, 0.3);
+    }
+
+    .logout-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(61, 90, 128, 0.4);
+    }
+
+    /* Main Layout */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 1024px) {
+      main {
+        grid-template-columns: 360px 1fr;
+      }
+    }
+
+    /* Card */
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e5e7eb;
+    }
+
+    .card h2 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 1rem;
+    }
+
+    .card-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-subtitle {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin-bottom: 1rem;
+    }
+
+    /* Left Sidebar */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* VM Info */
+    .vm-info-content {
+      font-size: 0.875rem;
+      color: #475569;
+    }
+
+    .vm-info-row {
+      padding: 0.625rem 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .vm-info-row:last-child {
+      border-bottom: none;
+    }
+
+    .vm-info-label {
+      font-weight: 600;
+      color: #1e293b;
+      margin-right: 0.5rem;
+    }
+
+    .vm-info-code {
+      background: #f1f5f9;
+      padding: 0.125rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.8rem;
+    }
+
+    .vm-info-hint {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      background: #e0f2fe;
+      border-left: 3px solid #0284c7;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      color: #0c4a6e;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 0.625rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
+    }
+
+    .btn-secondary {
+      background: white;
+      border: 1px solid #d1d5db;
+      color: #475569;
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+      border-color: #9ca3af;
+    }
+
+    .btn-small {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+    }
+
+    /* Question List */
+    .question-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .question-item {
+      width: 100%;
+      text-align: left;
+      padding: 0.875rem;
+      border-radius: 10px;
+      border: 2px solid #e5e7eb;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .question-item:hover {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+    }
+
+    .question-item.active {
+      border-color: #3d5a80;
+      background: #f1f5f9;
+      box-shadow: 0 2px 8px rgba(61, 90, 128, 0.2);
+    }
+
+    .question-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .question-item-title {
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 0.9rem;
+    }
+
+    .question-item-meta {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    /* Status Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.625rem;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-passed {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .badge-failed {
+      background: #fecaca;
+      color: #991b1b;
+    }
+
+    .badge-todo {
+      background: #e5e7eb;
+      color: #475569;
+    }
+
+    /* Question Detail */
+    .question-detail-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .question-detail-title {
+      flex: 1;
+    }
+
+    .question-detail-title h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+    }
+
+    .question-detail-meta {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+
+    .question-detail-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .question-body {
+      margin-bottom: 1.5rem;
+      padding: 1.25rem;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      font-size: 0.95rem;
+      color: #1e293b;
+      line-height: 1.6;
+    }
+
+    /* Output Console */
+    .output-section {
+      margin-top: 1.5rem;
+    }
+
+    .output-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 0.5rem;
+    }
+
+    .output-console {
+      padding: 1rem;
+      background: #0f172a;
+      border-radius: 10px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.8rem;
+      color: #86efac;
+      min-height: 150px;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Loading State */
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #94a3b8;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #94a3b8;
+      font-size: 0.95rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .question-detail-header {
+        flex-direction: column;
+      }
+
+      .question-detail-actions {
+        width: 100%;
+        justify-content: stretch;
+      }
+
+      .question-detail-actions button {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <div class="header-left">
+        <h1>學生端</h1>
+        <p id="who">載入中...</p>
+      </div>
+      <button id="logoutBtn" class="logout-btn">登出</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left Sidebar -->
+    <div class="sidebar">
+      <!-- VM Connection Info -->
+      <div class="card">
+        <h2>VM 連線資訊</h2>
+        <div id="vmInfo" class="vm-info-content">
+          <div class="loading">載入中...</div>
+        </div>
+      </div>
+
+      <!-- Question List -->
+      <div class="card">
+        <div class="card-title-row">
+          <h2>題目清單</h2>
+          <button id="startBtn" class="btn btn-primary btn-small">開始訓練</button>
+        </div>
+        <p class="card-subtitle">點擊題目查看內容，完成後可驗證並進入下一題</p>
+        <div id="qList" class="question-list">
+          <div class="loading">載入中...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Content Area -->
+    <div class="card">
+      <div class="question-detail-header">
+        <div class="question-detail-title">
+          <h2 id="qTitle">尚未選題</h2>
+          <div class="question-detail-meta" id="qMeta"></div>
+        </div>
+        <div class="question-detail-actions">
+          <button id="verifyBtn" class="btn btn-secondary">驗證</button>
+          <button id="nextBtn" class="btn btn-primary">下一題</button>
+        </div>
+      </div>
+
+      <div class="question-body" id="qBody">請先按「開始訓練」或從左側選擇題目開始練習。</div>
+
+      <div class="output-section">
+        <div class="output-label">系統輸出 / 驗證結果</div>
+        <div class="output-console" id="out">等待操作...</div>
+      </div>
+    </div>
+  </main>
+
+<script>
+let currentQid = null;
+
+async function api(path, opt={}) {
+  const res = await fetch(path, { credentials:"include", ...opt });
+  const data = await res.json().catch(()=> ({}));
+  if (!res.ok) throw data;
+  return data;
+}
+
+async function mustStudent(){
+  const me = await api("/api/me");
+  if (!me.user) location.href = "/";
+  if (me.user.role !== "student") location.href = "/";
+  document.getElementById("who").textContent = `登入中：${me.user.username}（${me.user.role}）`;
+}
+
+function escapeHtml(s){
+  return (s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+}
+
+function badge(status){
+  if (status === "passed") return `<span class="badge badge-passed">PASSED</span>`;
+  if (status === "failed") return `<span class="badge badge-failed">FAILED</span>`;
+  return `<span class="badge badge-todo">TODO</span>`;
+}
+
+function qItem(q, isCurrent){
+  return `
+  <button data-id="${q.id}" class="question-item ${isCurrent ? 'active' : ''}">
+    <div class="question-item-header">
+      <div class="question-item-title">#${q.id} ${escapeHtml(q.title)}</div>
+      ${badge(q.status)}
+    </div>
+    <div class="question-item-meta">${q.difficulty} | ${escapeHtml(q.type)} | ${escapeHtml(q.fault_id)}</div>
+  </button>`;
+}
+
+async function loadList(){
+  const r = await api("/api/student/questions");
+  currentQid = r.current_qid || currentQid;
+  const el = document.getElementById("qList");
+
+  if (r.rows.length === 0) {
+    el.innerHTML = '<div class="empty-state">目前沒有題目</div>';
+    return;
+  }
+
+  el.innerHTML = r.rows.map(q => qItem(q, q.id === currentQid)).join("");
+
+  // 綁定點擊事件
+  [...el.querySelectorAll("button[data-id]")].forEach(btn=>{
+    btn.addEventListener("click", ()=> selectQ(parseInt(btn.dataset.id,10)));
+  });
+
+  // 如果有當前題目且右側還沒載入，就載入一次
+  if (currentQid) await renderQ(currentQid);
+}
+
+async function renderQ(qid){
+  const r = await api(`/api/student/questions/${qid}`);
+  const q = r.q;
+  document.getElementById("qTitle").textContent = q.title;
+  document.getElementById("qMeta").textContent = `難度：${q.difficulty} | 類型：${q.type} | fault=${q.fault_id} | check=${q.check_id}`;
+  document.getElementById("qBody").textContent = q.body;
+}
+
+async function selectQ(qid){
+  currentQid = qid;
+  await loadList();
+}
+
+function setOut(text){
+  document.getElementById("out").textContent = text || "";
+}
+
+async function loadVmInfo(){
+  try{
+    const r = await api("/api/student/vm-info");
+    const el = document.getElementById("vmInfo");
+    if (!r.assigned) {
+      el.innerHTML = `<div class="empty-state" style="padding: 1rem;">${r.message || "尚未分配 VM"}</div>`;
+    } else {
+      el.innerHTML = `
+        <div class="vm-info-row">
+          <span class="vm-info-label">VM ID:</span>
+          <span>${r.vmid}</span>
+        </div>
+        <div class="vm-info-row">
+          <span class="vm-info-label">VM 名稱:</span>
+          <span>${escapeHtml(r.vm_name || '')}</span>
+        </div>
+        <div class="vm-info-row">
+          <span class="vm-info-label">IP 地址:</span>
+          <span class="vm-info-code">${r.vm_ip || '未設定'}</span>
+        </div>
+        <div class="vm-info-row">
+          <span class="vm-info-label">快照:</span>
+          <span>${escapeHtml(r.snapshot_name || 'clean_start')}</span>
+        </div>
+        ${r.vm_ip ? `<div class="vm-info-hint">💡 使用 SSH 連線到此 IP 進行系統修復</div>` : ''}
+      `;
+    }
+  }catch(err){
+    document.getElementById("vmInfo").innerHTML = `<div style="color: #ef4444; font-size: 0.875rem;">載入失敗: ${err?.error || '未知錯誤'}</div>`;
+  }
+}
+
+document.getElementById("logoutBtn").addEventListener("click", async ()=>{
+  await api("/api/auth/logout", { method:"POST" });
+  location.href = "/";
+});
+
+document.getElementById("startBtn").addEventListener("click", async ()=>{
+  setOut("🚀 Starting... 正在分配 VM 並注入故障，請稍候...");
+  try{
+    const r = await api("/api/student/start", { method:"POST" });
+    currentQid = r.current_qid;
+    setOut(`✅ VM 分配完成\n\nVM ID: ${r.vm_info?.vmid || 'N/A'}\nVM IP: ${r.vm_info?.vm_ip || 'N/A'}\n\n📌 Fault Injected: ${r.injected}\n${r.inject_output}`);
+    await loadVmInfo();
+    await loadList();
+  }catch(err){
+    setOut(`❌ 啟動失敗\n\n${err?.error || "未知錯誤"}`);
+  }
+});
+
+document.getElementById("verifyBtn").addEventListener("click", async ()=>{
+  if (!currentQid) return setOut("⚠️ 請先選擇題目或按「開始訓練」");
+  setOut("🔍 Verifying...");
+  try{
+    const r = await api("/api/student/verify", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ question_id: currentQid })
+    });
+    const status = r.passed ? "✅ PASSED" : "❌ FAILED";
+    setOut(`${status}\n\n${r.output}`);
+    await loadList();
+  }catch(err){
+    setOut(`❌ 驗證失敗\n\n${err?.error || "未知錯誤"}`);
+  }
+});
+
+document.getElementById("nextBtn").addEventListener("click", async ()=>{
+  setOut("⏭️ Next...");
+  try{
+    const r = await api("/api/student/next", { method:"POST" });
+    if (r.done) {
+      setOut("🎉 恭喜！全部題目已完成！\n\n你已經完成了所有的練習題目。");
+      return;
+    }
+    currentQid = r.current_qid;
+    setOut(`📌 Fault Injected: ${r.injected}\n${r.inject_output}`);
+    await loadList();
+  }catch(err){
+    setOut(`❌ 進入下一題失敗\n\n${err?.error || "未知錯誤"}`);
+  }
+});
+
+(async ()=>{
+  await mustStudent();
+  await loadVmInfo();
+  await loadList();
+})();
+</script>
+</body>
+</html>

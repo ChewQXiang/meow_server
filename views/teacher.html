@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>歡迎｜Platform</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      position: sticky;
+      top: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid #e5e7eb;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      z-index: 100;
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 0.25rem;
+    }
+
+    .header-left p {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+
+    .logout-btn {
+      padding: 0.625rem 1.5rem;
+      background: linear-gradient(135deg, #3d5a80 0%, #2c4a66 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(61, 90, 128, 0.3);
+    }
+
+    .logout-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(61, 90, 128, 0.4);
+    }
+
+    /* Main Content */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 1024px) {
+      .grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .full-width {
+        grid-column: 1 / -1;
+      }
+    }
+
+    /* Card */
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e5e7eb;
+      transition: box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .card h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-subtitle {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Form */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #475569;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+      background: #f9fafb;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #3d5a80;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(61, 90, 128, 0.1);
+    }
+
+    .form-group textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 0.875rem;
+      background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+    }
+
+    .error-msg {
+      font-size: 0.875rem;
+      color: #ef4444;
+      margin-top: 0.75rem;
+      min-height: 20px;
+    }
+
+    /* Material List */
+    .material-item {
+      padding: 1rem;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      margin-bottom: 0.75rem;
+    }
+
+    .material-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .material-title {
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 0.25rem;
+    }
+
+    .material-meta {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: #94a3b8;
+    }
+
+    /* Table */
+    .table-container {
+      overflow-x: auto;
+      margin-top: 1.5rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    thead {
+      background: #f8fafc;
+    }
+
+    th {
+      text-align: left;
+      padding: 0.875rem 1rem;
+      font-weight: 600;
+      color: #475569;
+      border-bottom: 2px solid #e5e7eb;
+    }
+
+    td {
+      padding: 0.875rem 1rem;
+      color: #1e293b;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.625rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .badge-easy {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .badge-medium {
+      background: #fed7aa;
+      color: #92400e;
+    }
+
+    .badge-hard {
+      background: #fecaca;
+      color: #991b1b;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <div class="header-left">
+        <h1>教師端</h1>
+        <p id="who">載入中...</p>
+      </div>
+      <button id="logoutBtn" class="logout-btn">登出</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid">
+      <!-- 新增教材 -->
+      <section class="card">
+        <h2>新增教材</h2>
+
+        <form id="matForm">
+          <div class="form-group">
+            <label>標題</label>
+            <input id="matTitle" placeholder="教材標題" required />
+          </div>
+          <div class="form-group">
+            <label>內容</label>
+            <textarea id="matContent" placeholder="貼上教材內容..." required></textarea>
+          </div>
+          <button type="submit" class="submit-btn">送出</button>
+          <p id="matMsg" class="error-msg"></p>
+        </form>
+      </section>
+
+      <!-- 教材列表 -->
+      <section class="card">
+        <h2>教材列表</h2>
+        <div id="matList">
+          <div class="empty-state">載入中...</div>
+        </div>
+      </section>
+
+      <!-- 題庫（30題） -->
+      <section class="card full-width">
+        <h2>題庫（腳本題目 30 題）</h2>
+        <p class="card-subtitle">題目已綁定 fault/check；你只負責平台 UI + API。</p>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>標題</th>
+                <th>難度</th>
+                <th>類型</th>
+                <th>fault</th>
+                <th>check</th>
+              </tr>
+            </thead>
+            <tbody id="qTbody">
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">載入中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+<script>
+async function api(path, opt={}) {
+  const res = await fetch(path, { credentials:"include", ...opt });
+  const data = await res.json().catch(()=> ({}));
+  if (!res.ok) throw data;
+  return data;
+}
+
+async function mustTeacher(){
+  const me = await api("/api/me");
+  if (!me.user) location.href = "/";
+  if (me.user.role !== "teacher") location.href = "/";
+  document.getElementById("who").textContent = `登入中：${me.user.username}（${me.user.role}）`;
+}
+
+function matCard(m){
+  return `
+  <div class="material-item">
+    <div class="material-title">${escapeHtml(m.title)}</div>
+    <div class="material-meta">id=${m.id} | ${new Date(m.created_at).toLocaleString('zh-TW')}</div>
+  </div>`;
+}
+
+function escapeHtml(s){
+  return (s||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+}
+
+function getDifficultyBadge(difficulty) {
+  const badgeClass = {
+    'easy': 'badge-easy',
+    'medium': 'badge-medium',
+    'hard': 'badge-hard'
+  }[difficulty] || 'badge-easy';
+
+  const label = {
+    'easy': '簡單',
+    'medium': '中等',
+    'hard': '困難'
+  }[difficulty] || difficulty;
+
+  return `<span class="badge ${badgeClass}">${label}</span>`;
+}
+
+async function loadMaterials(){
+  const r = await api("/api/teacher/materials");
+  const el = document.getElementById("matList");
+  if (r.rows.length === 0) {
+    el.innerHTML = '<div class="empty-state">目前沒有教材</div>';
+  } else {
+    el.innerHTML = r.rows.map(matCard).join("");
+  }
+}
+
+async function loadQuestions(){
+  const r = await api("/api/teacher/questions");
+  const tb = document.getElementById("qTbody");
+  if (r.rows.length === 0) {
+    tb.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: #94a3b8;">目前沒有題目</td></tr>';
+  } else {
+    tb.innerHTML = r.rows.map(q => `
+      <tr>
+        <td>${q.id}</td>
+        <td>${escapeHtml(q.title)}</td>
+        <td>${getDifficultyBadge(q.difficulty)}</td>
+        <td>${escapeHtml(q.type)}</td>
+        <td><code style="font-size: 0.8rem; color: #6366f1;">${escapeHtml(q.fault_id)}</code></td>
+        <td><code style="font-size: 0.8rem; color: #10b981;">${escapeHtml(q.check_id)}</code></td>
+      </tr>
+    `).join("");
+  }
+}
+
+document.getElementById("logoutBtn").addEventListener("click", async ()=>{
+  await api("/api/auth/logout", { method:"POST" });
+  location.href = "/";
+});
+
+document.getElementById("matForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const msg = document.getElementById("matMsg");
+  msg.textContent = "";
+  try{
+    const title = document.getElementById("matTitle").value.trim();
+    const content = document.getElementById("matContent").value.trim();
+    await api("/api/teacher/materials", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ title, content })
+    });
+    document.getElementById("matTitle").value = "";
+    document.getElementById("matContent").value = "";
+    await loadMaterials();
+  }catch(err){
+    msg.textContent = err?.error || "新增失敗（請確定是教師身份登入）";
+  }
+});
+
+(async ()=>{
+  await mustTeacher();
+  await loadMaterials();
+  await loadQuestions();
+})();
+</script>
+</body>
+</html>
