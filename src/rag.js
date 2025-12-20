@@ -9,6 +9,17 @@ let pdfParse = null;
 let pdfParseError = null;
 
 function ensureDomPolyfills() {
+  if (typeof process.getBuiltinModule !== 'function') {
+    // pdfjs-dist 4.x 在某些 Node 版本會嘗試呼叫此 API
+    process.getBuiltinModule = (name) => {
+      try {
+        return require(name);
+      } catch (e) {
+        return null;
+      }
+    };
+  }
+
   if (typeof DOMMatrix === 'undefined') {
     global.DOMMatrix = class DOMMatrix {
       constructor() {}
@@ -198,15 +209,13 @@ async function fetchHackMD(url) {
     }
 
     const isNetwork = networkCodes.has(error.code);
-    const fallbackError = new Error(
+    const finalError = new Error(
       isNetwork
         ? `Failed to fetch HackMD: 網路連線失敗（${error.code || 'unknown'}），請稍後再試或確認伺服器能連線 HackMD。`
         : `Failed to fetch HackMD: ${error.message}`
     );
-    fallbackError.statusCode = status || (isNetwork ? 502 : undefined);
-    const fallbackError = new Error(`Failed to fetch HackMD: ${error.message}`);
-    fallbackError.statusCode = status;
-    throw fallbackError;
+    finalError.statusCode = status || (isNetwork ? 502 : undefined);
+    throw finalError;
   }
 }
 
