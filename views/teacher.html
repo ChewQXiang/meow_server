@@ -355,6 +355,7 @@
             <label>選擇 PDF 檔案</label>
             <input type="file" id="pdfFile" accept=".pdf,.md,.txt" required style="padding: 0.5rem; background: white;" />
           </div>
+          <p id="pdfStatus" class="error-msg" style="color: #f59e0b;"></p>
           <button type="submit" class="submit-btn">上傳</button>
           <p id="pdfMsg" class="error-msg"></p>
         </form>
@@ -373,6 +374,7 @@
             <label>描述（選填）</label>
             <input id="hackmdDesc" placeholder="教材描述" />
           </div>
+          <p id="hackmdStatus" class="error-msg" style="color: #f59e0b;"></p>
           <button type="submit" class="submit-btn">匯入</button>
           <p id="hackmdMsg" class="error-msg"></p>
         </form>
@@ -482,6 +484,31 @@ async function loadQuestions(){
         <td><code style="font-size: 0.8rem; color: #10b981;">${escapeHtml(q.check_id)}</code></td>
       </tr>
     `).join("");
+  }
+}
+
+async function loadRagConfig() {
+  try {
+    const r = await api("/api/teacher/rag/config");
+
+    if (!r.pdfParsingAvailable) {
+      document.getElementById("pdfStatus").textContent = "⚠️ 目前環境無法解析 PDF，請改用 Markdown / TXT；若需 PDF 解析請升級 Node 版本並提供 DOMMatrix polyfill。";
+      document.getElementById("pdfFile").setAttribute("disabled", "disabled");
+      document.querySelector('#pdfForm button[type=\"submit\"]').setAttribute("disabled", "disabled");
+    } else {
+      document.getElementById("pdfStatus").textContent = "";
+      document.getElementById("pdfFile").removeAttribute("disabled");
+      document.querySelector('#pdfForm button[type=\"submit\"]').removeAttribute("disabled");
+    }
+
+    if (!r.hackmdTokenConfigured) {
+      document.getElementById("hackmdStatus").textContent = "⚠️ 未設定 HACKMD_TOKEN，若文件未公開可能會收到 403。請將文件設為公開或提供 token。";
+    } else {
+      document.getElementById("hackmdStatus").textContent = "";
+    }
+  } catch (error) {
+    // 若設定拉取失敗，不阻塞頁面
+    console.warn("Failed to load RAG config", error);
   }
 }
 
@@ -610,6 +637,7 @@ document.getElementById("hackmdForm").addEventListener("submit", async (e)=>{
   await mustTeacher();
   await loadMaterials();
   await loadQuestions();
+  await loadRagConfig();
 })();
 </script>
 </body>

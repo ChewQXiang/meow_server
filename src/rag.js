@@ -16,6 +16,10 @@ try {
   console.warn('       若需啟用，請升級至 Node.js 20+ 或在環境中提供 DOMMatrix / ImageData / Path2D polyfill。');
 }
 
+function isPDFParsingAvailable() {
+  return Boolean(pdfParse);
+}
+
 // 初始化 OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'your-api-key-here'
@@ -62,7 +66,9 @@ function chunkText(text, chunkSize = 500) {
  */
 async function parsePDF(buffer) {
   if (!pdfParse) {
-    throw new Error(`PDF parsing is disabled in this environment：${pdfParseError?.message || '缺少 DOM API polyfill'}`);
+    const error = new Error(`PDF 解析功能目前停用：${pdfParseError?.message || '缺少 DOM API polyfill 或 Node.js 版本過低'}。請改用 Markdown / TXT 上傳，或升級到 Node.js 20 並提供 DOMMatrix polyfill。`);
+    error.statusCode = 503;
+    throw error;
   }
 
   try {
@@ -100,16 +106,65 @@ function parseMarkdown(markdown = '') {
  * @returns {Promise<string>} - Markdown 內容
  */
 async function fetchHackMD(url) {
-  try {
-    // HackMD URL 格式: https://hackmd.io/@user/note
-    // 轉換為 raw 格式: https://hackmd.io/@user/note/download
-    const rawUrl = url.endsWith('/download') ? url : `${url}/download`;
+  const axios = require('axios');
+  const headers = { 'User-Agent': 'meow-server-rag' };
 
-    const axios = require('axios');
-    const response = await axios.get(rawUrl);
+  // HackMD URL 格式: https://hackmd.io/@user/note
+  // 轉換為 raw 格式: https://hackmd.io/@user/note/download
+  const rawUrl = url.endsWith('/download') ? url : `${url}/download`;
+
+  const tryHackMDAPI = async () => {
+    const token = process.env.HACKMD_TOKEN;
+    if (!token) return null;
+
+    const noteId = (() => {
+      try {
+        const { pathname } = new URL(url);
+        const segments = pathname.split('/').filter(Boolean);
+        return segments[segments.length - 1];
+      } catch (e) {
+        return null;
+      }
+    })();
+
+    if (!noteId) return null;
+
+    const apiUrl = `https://api.hackmd.io/v1/notes/${noteId}`;
+    const response = await axios.get(apiUrl, {
+      headers: { ...headers, Authorization: `Bearer ${token}` }
+    });
+
+    if (response.data?.content) {
+      return response.data.content;
+    }
+
+    throw new Error('HackMD API 回傳空內容，請確認 noteId 是否正確');
+  };
+
+  try {
+    const response = await axios.get(rawUrl, { headers });
     return response.data;
   } catch (error) {
-    throw new Error(`Failed to fetch HackMD: ${error.message}`);
+    const status = error.response?.status;
+
+    if (status === 403) {
+      try {
+        const apiContent = await tryHackMDAPI();
+        if (apiContent) return apiContent;
+      } catch (apiError) {
+        const friendlyError = new Error(`Failed to fetch HackMD via API: ${apiError.message}`);
+        friendlyError.statusCode = apiError.response?.status || 403;
+        throw friendlyError;
+      }
+
+      const friendlyError = new Error('Failed to fetch HackMD: 403 Forbidden，請確認文件已設為公開，或在環境變數 HACKMD_TOKEN 中提供存取權杖以讀取私人文件');
+      friendlyError.statusCode = 403;
+      throw friendlyError;
+    }
+
+    const fallbackError = new Error(`Failed to fetch HackMD: ${error.message}`);
+    fallbackError.statusCode = status;
+    throw fallbackError;
   }
 }
 
@@ -576,5 +631,6 @@ module.exports = {
   generateFaultScript,
   generateCheckScript,
   generateQuestionWithScripts,
-  vectorStore // 用於測試
+  vectorStore, // 用於測試
+  isPDFParsingAvailable
 };
