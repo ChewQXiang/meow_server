@@ -110,13 +110,23 @@ function registerRAGApis(app, requireAuth, requireRole) {
           message: '教材上傳成功'
         });
       } catch (error) {
-        console.error('Material upload error:', error);
+        console.error('[Material Upload Error]', error.message);
+        if (error.stack) {
+          console.error('Stack:', error.stack);
+        }
         const status = error.statusCode || 500;
         if (req.file?.path) {
           // 清理上傳檔案以免佔用空間
           fs.unlink(req.file.path).catch(() => {});
         }
-        res.status(status).json({ ok: false, error: error.message });
+
+        // 提供更友好的錯誤訊息
+        let userMessage = error.message;
+        if (error.message.includes('DOMMatrix') || error.message.includes('pdf-parse')) {
+          userMessage = 'PDF 解析功能目前無法使用。請改用 Markdown (.md) 或純文字 (.txt) 格式上傳教材。';
+        }
+
+        res.status(status).json({ ok: false, error: userMessage });
       }
     }
   );
@@ -163,9 +173,23 @@ function registerRAGApis(app, requireAuth, requireRole) {
           message: 'HackMD 教材匯入成功'
         });
       } catch (error) {
-        console.error('HackMD import error:', error);
+        console.error('[HackMD Import Error]', error.message);
+        if (error.stack) {
+          console.error('Stack:', error.stack);
+        }
         const status = error.statusCode || 500;
-        res.status(status).json({ ok: false, error: error.message });
+
+        // 提供更友好的錯誤訊息
+        let userMessage = error.message;
+        if (status === 403) {
+          userMessage = `無法存取 HackMD 文件（403 Forbidden）。\n\n` +
+            `解決方法：\n` +
+            `1. 確認文件已設為「公開」（Anyone can view）\n` +
+            `2. 或在環境變數中設定 HACKMD_TOKEN 以存取私人文件\n\n` +
+            `詳細錯誤：${error.message}`;
+        }
+
+        res.status(status).json({ ok: false, error: userMessage });
       }
     }
   );
